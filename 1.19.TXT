@@ -1,0 +1,820 @@
+import tkinter as tk
+from tkinter import messagebox
+
+import pandas as pd
+import pymysql
+import calendar
+import tkinter.ttk as ttk
+import tkinter.font as tkFont
+import tkinter.messagebox
+import pickle
+import numpy as np
+import math
+import serial
+
+from socket import *
+
+udp_socket = socket(AF_INET, SOCK_DGRAM)
+# local_addr = ('10.16.4.226', 8080)
+# dest_addr = ('10.16.4.226', 5000)
+# local_addr = ('192.168.1.3', 8080)
+# dest_addr = ('192.168.1.3', 5000)
+local_addr = ('192.168.137.1', 8080)
+dest_addr = ('192.168.137.1', 5000)
+udp_socket.bind(local_addr)
+
+
+def windows2():  # 功能界面
+    win2 = tk.Toplevel()
+    win2.geometry('1000x400')
+    win2.title('操作')
+
+    photo = tk.PhotoImage(file="8.png")  # 背景
+    theLabel = tk.Label(win2, image=photo, compound=tk.CENTER)
+    theLabel.place(x=0, y=0)
+
+    global tree
+    tree = ttk.Treeview(win2, show='headings', height=12)
+    tree['columns'] = ("姓名", "卡号", "金额", "手机号")
+    tree.column("姓名", width=100, anchor="center")
+    tree.column("卡号", width=100, anchor="center")
+    tree.column("金额", width=150, anchor="center")
+    tree.column("手机号", width=150, anchor="center")
+    tree.heading("姓名", text='姓名')
+    tree.heading("卡号", text='卡号')
+    tree.heading("金额", text='金额')
+    tree.heading("手机号", text='手机号')
+
+    btn = tk.Button(win2, text='注册', bg='white', font=('黑体', 10, 'bold'), command=insert)
+    btn.place(x=600, y=0)
+    btn2 = tk.Button(win2, text='删卡', bg='white', font=('黑体', 10, 'bold'), command=delete)
+    btn2.place(x=600, y=110)
+    btn = tk.Button(win2, text='充值', bg='white', font=('黑体', 10, 'bold'), command=recharge)
+    btn.place(x=600, y=130)
+    btn = tk.Button(win2, text='消费', bg='white', font=('黑体', 10, 'bold'), command=pay)
+    btn.place(x=600, y=170)
+
+    Label_21 = tk.Label(win2, text='姓名', font=("Arial", 12))
+    Label_21.place(x=650, y=0)
+    Label_22 = tk.Label(win2, text='卡号', font=("Arial", 12))
+    Label_22.place(x=650, y=20)
+    Label_23 = tk.Label(win2, text='金额', font=("Arial", 12))
+    Label_23.place(x=650, y=40)
+    Label_23 = tk.Label(win2, text='手机', font=("Arial", 12))
+    Label_23.place(x=650, y=60)
+    Label_23 = tk.Label(win2, text='会员', font=("Arial", 12))
+    Label_23.place(x=650, y=80)
+    Label_24 = tk.Label(win2, text='卡号', font=("Arial", 12))
+    Label_24.place(x=650, y=110)
+    Label_31 = tk.Label(win2, text='卡号', font=("Arial", 12))
+    Label_31.place(x=650, y=130)
+    Label_31 = tk.Label(win2, text='金额', font=("Arial", 12))
+    Label_31.place(x=650, y=150)
+    Label_31 = tk.Label(win2, text='卡号', font=("Arial", 12))
+    Label_31.place(x=650, y=170)
+    Label_31 = tk.Label(win2, text='金额', font=("Arial", 12))
+    Label_31.place(x=650, y=190)
+
+    btn = tk.Button(win2, text='注册的卡号', bg='white', font=('黑体', 10, 'bold'), command=getcard)
+    btn.place(x=600, y=300)
+    btn = tk.Button(win2, text='选择会员类型', bg='white', font=('黑体', 10, 'bold'), command=getvip)
+    btn.place(x=600, y=360)
+    btn = tk.Button(win2, text='充值的卡号', bg='white', font=('黑体', 10, 'bold'), command=getcard3)
+    btn.place(x=600, y=320)
+    btn = tk.Button(win2, text='消费的卡号', bg='white', font=('黑体', 10, 'bold'), command=getcard4)
+    btn.place(x=600, y=340)
+
+    text = tk.Text(win2, width=56, height=5)
+    text.place(x=0, y=300)
+    text.insert(tk.INSERT, "注："
+                           "1.输入姓名、卡号、金额、手机号、及会员号进行注册会员"
+                           "    2·白金会员和钻石会员在充值能得到优惠"
+                )  # INSERT索引表示插入光标当前的位置
+
+    global E1  # 会员的姓名
+    E1 = tk.StringVar()
+    Entry1 = tk.Entry(win2, textvariable=E1)
+    Entry1.place(x=700, y=0)
+
+    global E2  # 会员卡的卡号
+    E2 = tk.StringVar()
+    Entry2 = tk.Entry(win2, textvariable=E2)
+    Entry2.place(x=700, y=20)
+
+    global E3  # 充值的金额
+    E3 = tk.StringVar()
+    Entry3 = tk.Entry(win2, textvariable=E3)
+    Entry3.place(x=700, y=40)
+
+    global Ep  # 会员的手机号
+    Ep = tk.StringVar()
+    Entry_p = tk.Entry(win2, textvariable=Ep)
+    Entry_p.place(x=700, y=60)
+
+    global Ev  # 会员的vip号
+    Ev = tk.StringVar()
+    Entry_v = tk.Entry(win2, textvariable=Ev)
+    Entry_v.place(x=700, y=80)
+
+    global E4  # 要删除的卡号
+    E4 = tk.StringVar()
+    Entry4 = tk.Entry(win2, textvariable=E4)
+    Entry4.place(x=700, y=109)
+
+    global E5  # 充值的金额
+    E5 = tk.StringVar()
+    Entry5 = tk.Entry(win2, textvariable=E5)
+    Entry5.place(x=700, y=151)
+
+    global E6  # 充值的卡号
+    E6 = tk.StringVar()
+    Entry6 = tk.Entry(win2, textvariable=E6)
+    Entry6.place(x=700, y=130)
+
+    global E7  # 消费的金额
+    E7 = tk.StringVar()
+    Entry7 = tk.Entry(win2, textvariable=E7)
+    Entry7.place(x=700, y=191)
+
+    global E8  # 消费的卡号
+    E8 = tk.StringVar()
+    Entry8 = tk.Entry(win2, textvariable=E8)
+    Entry8.place(x=700, y=170)
+    win2.mainloop()
+
+
+def getcard():
+    send_data = ("1")
+    udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+    recv_data = udp_socket.recvfrom(1024)
+    print(recv_data[0].decode('gbk'))
+    E2.set(recv_data[0].decode('gbk'))
+
+
+def getmoney():
+    global send_data
+    money = E3.get()
+    state = Ev.get()
+    if state == "0":
+        send_data = ("2")
+    if state == "1":
+        if len(money) == 1:
+            send_data = ("000" + money)
+        if len(money) == 2:
+            send_data = ("00" + money)
+        if len(money) >= 3:
+            send_data = ("0" + money)
+    if state == "2":
+        if len(money) == 1:
+            send_data = ("a00" + money)
+        if len(money) == 2:
+            send_data = ("a0" + money)
+        if len(money) >= 3:
+            send_data = ("a" + money)
+
+    udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+
+
+def getvip():
+    send_data = ("b")
+    udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+    recv_data = udp_socket.recvfrom(1024)
+    print(recv_data[0].decode('gbk'))
+    Ev.set(recv_data[0].decode('gbk'))
+
+
+def getcard2():
+    send_data = input("input2:\n")
+    udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+    recv_data = udp_socket.recvfrom(1024)
+    print(recv_data[0].decode('gbk'))
+    E4.set(recv_data[0].decode('gbk'))
+
+
+# 充值卡3
+def getcard3():
+    send_data = ("3")
+    udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+    recv_data = udp_socket.recvfrom(1024)
+    print(recv_data[0].decode('gbk'))
+    E6.set(recv_data[0].decode('gbk'))
+
+
+# 消费卡5
+def getcard4():
+    send_data = ("5")
+    udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+    recv_data = udp_socket.recvfrom(1024)
+    print(recv_data[0].decode('gbk'))
+    E8.set(recv_data[0].decode('gbk'))
+
+
+def getcard5():
+    send_data = ("7")
+    udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+    recv_data = udp_socket.recvfrom(1024)
+    print(recv_data[0].decode('gbk'))
+    E_42.set(recv_data[0].decode('gbk'))
+
+
+def insert():  # 注册
+    global s
+    global_dict1 = {}  # 初始化字典，该字典以用户名字作为键值，以卡号作为对应键值的信息
+    name = E1.get()
+    sno = E2.get()
+    money = E3.get()
+    phonenumber = Ep.get()
+    vip = Ev.get()  # 以上5行代码从键盘获取信息
+    sql_insert = 'insert into yonghu values ("%s","%s","%s","%s","%s")' % (
+        E1.get(), E2.get(), E3.get(), Ep.get(), Ev.get())
+    sql_insert1 = 'insert into record(sno, money,time)values ("%s","+%s",now())' % (
+        E2.get(), E3.get())  # 以上2行分别向yonghu表record表插入信息（name,sno...）
+    sql_choice = "select * from yonghu"  # 从数据库yonghu表中取出所有的信息，放入sql_choice中
+    try:
+        cursor.execute(sql_choice)
+        data_1 = cursor.fetchall()  # 这两行代码将yonghu表中信息取出放入到data_1中
+        for word in data_1:  # 遍历data_1的每一行，用word存储
+            global_dict1[str(word[0])] = int(word[1])  # 取出word的每一行，需要以word[0]为字典键值，以word[1]为其键值对应元素存入字典中
+
+        # 一些判断的操作，其中name表示用户名字，sno表示卡号，money表示金额，phonenumber表示用户手机号，vip表示用户卡号
+        # 若输入的name,sno,money等等都为空，（即用户在界面不输入任何东西）就报错
+        if name == '':
+            messagebox.showerror(title=u"error", message=u"请输入姓名")
+            return
+        if sno == '':
+            messagebox.showerror(title=u"error", message=u"请输入卡号")
+            return
+        if money == '':
+            messagebox.showerror(title=u"error", message=u"请输入金额")
+            return
+        if phonenumber == '':
+            messagebox.showerror(title=u"error", message=u"请输入手机号")
+            return
+        if vip == '':
+            messagebox.showerror(title=u"error", message=u"请输入vip码")
+            return
+        for key in global_dict1:  # 遍历字典
+            if global_dict1[key] == int(sno):  # 根据字典查找卡号
+                messagebox.showerror(title=u"error", message=u"sno已存在")
+                return
+    except Exception as err:
+        print("SQL执行错误! 原因是", err)  # 若try部分执行错误，则爆出异常，以不至于程序中止，并能够显示出错误信息。
+    try:
+        cursor.execute(sql_insert)
+        cursor.execute(sql_insert1)  # 这两行的代码作用是：更新（用户在界面输入的）信息，并通过db.commit()操作提交到mydb数据库中
+        db.commit()
+    except Exception as err:
+        db.rollback()
+        print("SQL执行错误! 原因是", err)
+    getmoney()
+    # if int(vip) == 0:
+    # pass
+    # send_data = ("2")
+    # udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+    # recv_data = udp_socket.recvfrom(1024)
+    # print(recv_data[0].decode('gbk'))
+    sql_query = 'select * from yonghu'
+    yonghu = pd.read_sql_query(sql_query, db)  # 读取yonghu数据表中的信息，存入yonghu变量中（可以打印查看结果）
+
+    # print(yonghu)
+    def delButton(tree):  # 清空原来的tree
+        x = tree.get_children()
+        for item in x:
+            tree.delete(item)
+
+    delButton(tree)
+
+    a = len(yonghu)
+    print(a)
+    result1 = np.array(yonghu)  # 将信息以列表的形式表示和存储
+    print(result1)
+    j = 0
+    for j in range(a):  # 根据yonghu信息的总长度，依次取出对应的信息
+        b = (result1[j][0], result1[j][1], result1[j][2], result1[j][3])
+        tree.insert('', j, values=(b))
+    tree.place(x=0, y=0)
+
+
+def delete():  # 删卡
+    global_dict2 = {}  # 初始化字典，该字典以用户名字作为键值，以卡号作为对应键值的信息
+    sno = E4.get()  # 获取键盘输入的卡号
+    cursor = db.cursor()
+    sql_delete = 'delete from yonghu where sno = "%s" ' % (E4.get())
+    sql_delete1 = 'delete from record where sno = "%s" ' % (E4.get())  # 以上两行分别向yonghu表和record表插入信息(卡号)
+    sql_choice = "select * from yonghu"
+    cursor.execute(sql_choice)
+    data_2 = cursor.fetchall()
+
+    for word in data_2:
+        global_dict2[str(word[0])] = int(word[1])  # 该操作同上面的insert操作，需要记录卡号和用户名字与字典中
+    try:
+        if sno == '':
+            messagebox.showerror(title=u"error", message=u"请输入sno")
+            return
+        else:
+            for key in global_dict2:
+                if global_dict2[key] == sno:  # 若卡号原本就存在，则报出删卡成功
+                    messagebox.showinfo(title="删卡", message=u"删卡成功!")
+                    flag_flag = 1  # 用以标记信息
+            if flag_flag == 0:
+                messagebox.showinfo(title="删卡", message=u"卡号不存在，删卡失败!")
+        cursor.execute(sql_delete)
+        cursor.execute(sql_delete1)  # 这两行的代码作用是：更新（用户在界面输入的）信息，并通过db.commit()操作提交到mydb数据库中
+        db.commit()
+    finally:
+        # 这部分代码同上，就不过多注释了
+        cursor.close()
+        sql_query = 'select * from yonghu'
+        yonghu = pd.read_sql_query(sql_query, db)
+
+        def delButton(tree):  # 清空原来的tree
+            x = tree.get_children()
+            for item in x:
+                tree.delete(item)
+
+        delButton(tree)
+        a = len(yonghu)
+        result1 = np.array(yonghu)
+        j = 0
+        for j in range(a):
+            b = (result1[j][0], result1[j][1], result1[j][2], result1[j][3])
+            tree.insert('', j, values=(b))
+        tree.place(x=0, y=0)
+
+
+def recharge():  # 充值
+    k = 0
+    global s, r, send_data
+
+    sql_money = 'UPDATE  yonghu SET money= money +"%s" WHERE sno="%s"' % (E5.get(), E6.get())  # 这行代码需要获取金额和卡号信息存入数据库中
+    sql_insert = 'insert into record(sno, money, time)values ("%s","+%s",now());' % (
+        E6.get(), E5.get())  # 这行代码需要获取卡号和金额信息
+    sql_select = 'select * from yonghu'
+    sql_vip = 'select vip from yonghu where sno="%s"' % (E6.get())  # 获取卡号信息
+    cursor = db.cursor()
+    cursor1 = db.cursor()
+    cursor2 = db.cursor()
+    cursor.execute(sql_select)
+    cursor2.execute(sql_vip)
+    rs = cursor.fetchall()  # 取出所有信息
+    vip = cursor2.fetchone()  # 取出一行信息
+    sb = str(vip[0])  # 需要根据vip字段的第一个字符进行会员等级的判断（会员有三个等级，等级越高，就越会有优惠）。
+    try:
+        sno = E6.get()  # 输入卡号
+        money = E5.get()  # 输入金额
+        if sno == '':
+            messagebox.showerror(title=u"error", message=u"请输入卡号")
+            return
+        if money == '':
+            messagebox.showerror(title=u"error", message=u"请输入金额")
+            return
+
+        for r in rs:  # 判断卡号是否存在
+            s = str(r[1])
+            if sno == s:
+                k = 1
+        if k == 0:
+            messagebox.showerror(title=u"error", message=u"该卡号不存在")
+            return
+        if sb[0] == "0":  # 判断字符串state的第一个字符是不是0
+            sql_money = 'UPDATE  yonghu SET money= money +"%s" WHERE sno="%s"' % (E5.get(), E6.get())  # 同上
+            sql_insert = 'insert into record(sno, money, time)values ("%s","+%s",now());' % (
+                E6.get(), 1 * int(E5.get()))  # 同上
+            cursor.execute(sql_money)
+            cursor.execute(sql_insert)
+
+            if len(money) == 1:
+                send_data = ("400" + money)
+            if len(money) == 2:
+                send_data = ("40" + money)
+            if len(money) >= 3:
+                send_data = ("4" + money)
+            udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+
+        if sb[0] == "1":  # 判断字符串state的第1个字符是不是1
+
+            sql_money = 'UPDATE  yonghu SET money= money +2*"%s" WHERE sno="%s"' % (E5.get(), E6.get())  # 同上
+            sql_insert = 'insert into record(sno, money, time)values ("%s","+%s",now());' % (
+                E6.get(), 2 * int(E5.get()))  # 同上
+            cursor.execute(sql_money)
+            cursor.execute(sql_insert)
+
+            if len(money) == 1:
+                send_data = ("c00" + money)
+            if len(money) == 2:
+                send_data = ("c0" + money)
+            if len(money) >= 3:
+                send_data = ("c" + money)
+            udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+
+        if sb[0] == "2":  # 判断字符串state的第1个字符是不是2
+            sql_money = 'UPDATE  yonghu SET money= money +3*"%s" WHERE sno="%s"' % (E5.get(), E6.get())  # 同上
+            sql_insert = 'insert into record(sno, money, time)values ("%s","+%s",now());' % (
+                E6.get(), 3 * int(E5.get()))  # 同上
+            cursor.execute(sql_money)
+            cursor.execute(sql_insert)
+
+            if len(money) == 1:
+                send_data = ("d00" + money)
+            if len(money) == 2:
+                send_data = ("d0" + money)
+            if len(money) >= 3:
+                send_data = ("d" + money)
+            udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+        messagebox.showinfo(title="充值", message=u"充值成功!")
+        db.commit()
+    finally:
+        cursor.close()
+        cursor1.close()
+        cursor2.close()
+
+        sql_query = 'select * from yonghu'
+        yonghu = pd.read_sql_query(sql_query, db)
+
+        def delButton(tree):  # 清空原来的tree
+            x = tree.get_children()
+            for item in x:
+                tree.delete(item)
+
+        delButton(tree)
+        a = len(yonghu)
+        result1 = np.array(yonghu)
+        j = 0
+        for j in range(a):
+            b = (result1[j][0], result1[j][1], result1[j][2], result1[j][3])
+            tree.insert('', j, values=(b))
+        tree.place(x=0, y=0)
+
+
+def pay():  # 消费
+    k = 0
+    global s, send_data
+    sql_money = 'UPDATE yonghu SET money= money -"%s" WHERE sno="%s"' % (E7.get(), E8.get())  #
+    sql_insert = 'insert into record(sno, money, time)values ("%s","-%s",now());' % (E8.get(), E7.get())
+    sql_select = 'select * from yonghu'
+    sql_money1 = 'select money from yonghu where sno="%s"' % (E8.get())
+    cursor = db.cursor()
+    cursor1 = db.cursor()
+    cursor2 = db.cursor()
+    cursor.execute(sql_money)
+    cursor.execute(sql_select)
+    cursor2.execute(sql_money1)
+    rs = cursor.fetchall()
+    money1 = cursor2.fetchone()
+    try:
+        for r in rs:
+            s = str(r[1])
+        sno = E8.get()  # 新输入的卡号
+        money = E7.get()
+        if sno == '':
+            messagebox.showerror(title=u"error", message=u"请输入卡号")
+            return
+        if money == '':
+            messagebox.showerror(title=u"error", message=u"请输入金额")
+            return
+        Q = messagebox.askquestion(title='提示', message='请再次确定消费金额')
+        if Q == 'no':
+            sql_money = 'UPDATE yonghu SET money= money +"%s" WHERE sno="%s"' % (E7.get(), E8.get())  # 加回扣除的钱
+            cursor.execute(sql_money)
+            return
+        if str(money1)[2] == ("-"):  # 判断金额
+            messagebox.showerror(title=u"error", message=u"余额不足")
+            sql_money = 'UPDATE yonghu SET money= money +"%s" WHERE sno="%s"' % (E7.get(), E8.get())  # 加回扣除的钱
+            cursor.execute(sql_money)
+            return
+        else:
+            for r in rs:  # 判断卡号是否存在
+                s = str(r[1])
+                if sno == s:
+                    k = 1
+            if k == 0:
+                messagebox.showerror(title=u"error", message=u"该卡号不存在")
+                return
+            messagebox.showinfo(title=u"消费", message=u"消费成功!")
+
+            if len(money) == 1:
+                send_data = ("600" + money)
+            if len(money) == 2:
+                send_data = ("60" + money)
+            if len(money) >= 3:
+                send_data = ("6" + money)
+            # print(send_data.encode('gbk'))
+            udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+        cursor.execute(sql_insert)
+        db.commit()
+
+    finally:
+        cursor.close()
+        cursor1.close()
+        cursor2.close()
+        sql_query = 'select * from yonghu'
+        yonghu = pd.read_sql_query(sql_query, db)
+
+        def delButton(tree):  # 清空原来的tree
+            x = tree.get_children()
+            for item in x:
+                tree.delete(item)
+
+        delButton(tree)
+        a = len(yonghu)
+        result1 = np.array(yonghu)
+        j = 0
+        for j in range(a):
+            b = (result1[j][0], result1[j][1], result1[j][2], result1[j][3])
+            tree.insert('', j, values=(b))
+        tree.place(x=0, y=0)
+
+
+def windows4():  # 查询界面
+    win4 = tk.Toplevel()
+    win4.geometry('300x200')
+    win4.title('查询')
+    btn = tk.Button(win4, text='查询信息', bg='white', font=('黑体', 10, 'bold'), command=find)
+    btn.place(x=10, y=10)
+    btn = tk.Button(win4, text='查询记录', bg='white', font=('黑体', 10, 'bold'), command=record1)
+    btn.place(x=10, y=80)
+    btn41 = tk.Button(win4, text='获取卡号', bg='white', font=('黑体', 10, 'bold'), command=getcard5)
+    btn41.place(x=10, y=180)
+    Label_41 = tk.Label(win4, text='请输入手机号：', font=("Arial", 12))
+    Label_41.place(x=0, y=40)
+    Label_42 = tk.Label(win4, text='请输入卡号：', font=("Arial", 12))
+    Label_42.place(x=0, y=100)
+    global E_41  # phonenumber
+    E_41 = tk.StringVar()
+    Entry_41 = tk.Entry(win4, textvariable=E_41)
+    Entry_41.place(x=150, y=40)
+    global E_42
+    E_42 = tk.StringVar()
+    Entry_42 = tk.Entry(win4, textvariable=E_42)
+    Entry_42.place(x=150, y=100)
+
+
+def find():  # 通过手机号查询卡号信息
+    k = 0
+    sno = E_41.get()  # 用户键盘输入手机号
+    win5 = tk.Toplevel()
+    win5.geometry('550x450')
+    win5.title('查询操作')  # 设置窗口
+
+    sql_find = 'select * from yonghu where phonenumber = %s ' % (E_41.get())
+    sql_select = 'select * from yonghu'
+    cursor = db.cursor()
+    cursor.execute(sql_select)
+    rs = cursor.fetchall()
+    global result
+    try:
+        if sno == '':
+            messagebox.showerror(title=u"error", message=u"请输入sno")
+            return
+        else:
+            for r in rs:  # 判断手机号是否存在
+                s = str(r[3])
+                if sno == s:
+                    k = 1
+            if k == 0:
+                messagebox.showerror(title=u"error", message=u"该手机号不存在")
+                return
+        cursor.execute(sql_find)
+        result = cursor.fetchall()
+        db.commit()
+    finally:
+        cursor.close()
+    global tree
+    tree = ttk.Treeview(win5, show='headings', height=12)
+    tree['columns'] = ("姓名", "卡号", "金额", "手机号")
+    tree.column("姓名", width=100, anchor="center")
+    tree.column("卡号", width=100, anchor="center")
+    tree.column("金额", width=150, anchor="center")
+    tree.column("手机号", width=150, anchor="center")
+    tree.heading("姓名", text='姓名')
+    tree.heading("卡号", text='卡号')
+    tree.heading("金额", text='金额')
+    tree.heading("手机号", text='手机号')
+    a = len(result)
+    result = np.array(result)
+    j = 0
+    for j in range(a):
+        b = (result[j][0], result[j][1], result[j][2], result[j][3])
+        tree.insert('', j, values=(b))
+    tree.place(x=40, y=40)
+
+
+def record1():  # 查询消费记录
+    k = 0
+    sno = E_42.get()  # 获取键盘输入的卡号
+    win6 = tk.Toplevel()
+    win6.geometry('500x500')
+    win6.title('查询消费记录')
+    sql_record = 'select * from record where sno = "%s" ' % (E_42.get())
+    sql_select = 'select * from yonghu'
+    sql_money = 'select money from yonghu where sno = "%s" ' % (E_42.get())
+    cursor = db.cursor()
+    cursor1 = db.cursor()
+    cursor.execute(sql_select)
+    cursor1.execute(sql_money)
+    rs = cursor.fetchall()
+    money1 = cursor1.fetchone()
+    if money1 == None:
+        tk.messagebox.showerror('错误', '该卡号不存在')
+    money = str(money1[0])
+    try:
+        if sno == '':
+            messagebox.showerror(title=u"error", message=u"请输入卡号")
+            return
+        else:
+            for r in rs:  # 判断卡号是否存在
+                s = str(r[1])
+                # print(s, sno)
+                if sno == s:
+                    k = 1
+            if k == 0:
+                messagebox.showerror(title=u"error", message=u"该卡号不存在")
+                return
+
+        if len(money) == 1:
+            send_data = ("800" + money)
+        if len(money) == 2:
+            send_data = ("80" + money)
+        if len(money) >= 3:
+            send_data = ("8" + money)
+
+        udp_socket.sendto(send_data.encode('gbk'), dest_addr)
+        cursor.execute(sql_record)
+        db.commit()
+    finally:
+        cursor.close()
+        cursor1.close()
+        result1 = cursor.fetchall()
+    global tree
+    tree = ttk.Treeview(win6, show='headings', height=12)
+    tree['columns'] = ("卡号", "记录", "时间")
+    tree.column("卡号", width=100, anchor="center")
+    tree.column("记录", width=55, anchor="center")
+    tree.column("时间", width=150, anchor="center")
+    tree.heading("卡号", text='卡号')
+    tree.heading("记录", text='记录')
+    tree.heading("时间", text='时间')
+    a = len(result1)
+    result1 = np.array(result1)
+    j = 0
+    for j in range(a):
+        b = (result1[j][0], result1[j][1], result1[j][2])
+        tree.insert('', j, values=(b))
+    tree.place(x=40, y=40)
+
+
+def win():  # 主界面
+    window.destroy()
+    win = tk.Tk()
+    win.geometry('600x400')
+    win.title('健身房-燃烧你的卡路里！')
+
+    photo = tk.PhotoImage(file="2.gif")
+    theLabel = tk.Label(win, image=photo, compound=tk.CENTER)
+    theLabel.place(x=0, y=0)
+
+    btn = tk.Button(win, text='会员功能', bg='white', font=('黑体', 10, 'bold'), command=windows2)
+    btn.place(x=250, y=280)
+
+    btn1 = tk.Button(win, text='查询功能', bg='white', font=('黑体', 10, 'bold'), command=windows4)
+    btn1.place(x=250, y=310)
+
+    Label_1 = tk.Label(win, text='健身房会员管理系统', font=("Arial", 22))
+    Label_1.place(x=180, y=0)
+
+    win.mainloop()
+
+
+db = pymysql.connect(host="localhost", user="root", password="", db="mydb", charset="utf8")  # 链接数据库
+# 获取游标对象
+cursor = db.cursor()
+
+# 窗口
+window = tk.Tk()
+window.title('欢迎进入健身房会员管理系统')
+window.geometry('450x300')
+# 画布放置图片
+canvas = tk.Canvas(window, height=300, width=500)
+
+photo = tk.PhotoImage(file="1.gif")  # file：t图片路径
+imgLabel = tk.Label(window, image=photo)  # 把图片整合到标签类中
+imgLabel.pack(side=tk.RIGHT)  # 自动对齐
+
+canvas.pack(side='top')
+# 标签 用户名密码
+tk.Label(window, text='账号:', relief='groove').place(x=100, y=150)
+tk.Label(window, text='密码:', relief='groove').place(x=100, y=190)
+# 用户名输入框
+var_usr_name = tk.StringVar()
+entry_usr_name = tk.Entry(window, textvariable=var_usr_name)
+entry_usr_name.place(x=160, y=150)
+# 密码输入框
+var_usr_pwd = tk.StringVar()
+entry_usr_pwd = tk.Entry(window, textvariable=var_usr_pwd, show='*')
+entry_usr_pwd.place(x=160, y=190)
+
+
+def usr_log_in():
+    cnt = 0
+    # 输入框获取账号和密码
+    usr_name = var_usr_name.get()
+    usr_pwd = var_usr_pwd.get()
+    # 从本地字典获取用户信息，如果没有则新建本地数据库
+    if usr_name == '' or usr_pwd == '':
+        tk.messagebox.showerror(message='账号或密码为空')  # 若输入框为空，则显示为空提示
+    else:
+        sql = "select * from test01"  # 获取test01数据库表的信息
+        try:
+            m = cursor.execute(sql)  # 获取游标对象
+            while True:
+                data = cursor.fetchone()  # 取出一行信息
+                cnt += 1
+                if cnt == m:
+                    break  # 通过上述操作，保证每次添加进去数据库的信息都是最新的，（都能取出最后新添加的信息，用作data）
+            print(data[0])
+            if usr_name == data[0]:  # 若用户名存在，则说明之前注册成功了，下一步接着判断密码是否正确
+                if usr_pwd == data[1]:  # 若密码正确，则弹出登录界面
+                    tk.messagebox.showinfo(title='健身房会员系统',
+                                           message='欢迎管理员：' + usr_name)
+                    win()
+                else:  # 若密码错误，则显示错误
+                    tk.messagebox.showerror(message='密码错误')
+            else:  # 若用户没有注册，则提示用户进行注册
+                is_signup = tk.messagebox.askyesno('欢迎', '您还没有注册，是否现在注册')
+                if is_signup:
+                    usr_sign_up()
+        except Exception as err:
+            print("SQL执行错误! 原因是", err)
+
+
+# 注册函数
+def usr_sign_up():
+    # 确认注册时的相应函数
+    def signtowcg():
+        # 获取输入框内的内容
+        nn = new_name.get()
+        np = new_pwd.get()
+        npf = new_pwd_confirm.get()
+        sql = "select * from test01"
+        # 本地加载已有用户信息,如果没有则已有用户信息为空
+        try:
+            cursor.execute(sql)
+            exist_usr_info = cursor.fetchall()
+        except Exception as err:
+            print("SQL执行错误! 原因是", err)
+        if nn in exist_usr_info:
+            tk.messagebox.showerror('错误', '用户名已存在')
+        elif np == '' or nn == '':
+            tk.messagebox.showerror('错误', '用户名或密码为空')
+        elif np != npf:
+            tk.messagebox.showerror('错误', '密码前后不一致')
+        # 注册信息没有问题则将用户名密码写入数据库
+        else:
+            try:
+                sql = "insert into test01 values ('%s','%s')" % (nn, np)  # 输入名字和密码进入数据库
+                cursor.execute(sql)
+                db.commit()  # 更新数据库
+            except Exception as err:
+                db.rollback()
+                print("SQL执行错误! 原因是", err)
+            tk.messagebox.showinfo('欢迎', '注册成功')
+            # 注册成功关闭注册框
+            window_sign_up.destroy()
+
+    # 新建注册界面
+    window_sign_up = tk.Toplevel(window)
+    window_sign_up.geometry('350x200')
+    window_sign_up.title('注册')
+    # 用户名变量及标签、输入框
+    new_name = tk.StringVar()
+    tk.Label(window_sign_up, text='用户名：').place(x=10, y=10)
+    tk.Entry(window_sign_up, textvariable=new_name).place(x=150, y=10)
+    # 密码变量及标签、输入框
+    new_pwd = tk.StringVar()
+    tk.Label(window_sign_up, text='请输入密码：').place(x=10, y=50)
+    tk.Entry(window_sign_up, textvariable=new_pwd, show='*').place(x=150, y=50)
+    # 重复密码变量及标签、输入框
+    new_pwd_confirm = tk.StringVar()
+    tk.Label(window_sign_up, text='请再次输入密码：').place(x=10, y=90)
+    tk.Entry(window_sign_up, textvariable=new_pwd_confirm, show='*').place(x=150, y=90)
+    # 确认注册按钮及位置
+    bt_confirm_sign_up = tk.Button(window_sign_up, text='确认注册',
+                                   command=signtowcg)
+    bt_confirm_sign_up.place(x=150, y=130)
+
+
+# 结束的函数
+def usr_sign_quit():
+    window.destroy()
+
+
+# 登录 注册按钮
+bt_login = tk.Button(window, text='登录', command=usr_log_in, relief='groove')  # command命令后接的函数名，调用该函数
+bt_login.place(x=140, y=230)
+bt_logup = tk.Button(window, text='注册', command=usr_sign_up, relief='groove')  # 同上
+bt_logup.place(x=210, y=230)
+bt_logquit = tk.Button(window, text='退出', command=usr_sign_quit, relief='groove')  # 同上
+bt_logquit.place(x=280, y=230)
+# 主循环
+
+window.mainloop()
